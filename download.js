@@ -5,7 +5,18 @@ const fs = require("fs");
 
 const outputPath = "C:\\Users\\Ayush Kumar Nath\\Downloads\\Youtube";
 const outputFilename = "%(title)s.%(ext)s";
-const videoURL = prompt("Paste the video URL: ");
+
+let videoURL;
+while (true) {
+  videoURL = prompt("Paste the video URL: ");
+  // validate videoURL
+  if (!videoURL) {
+    console.log("No URL provided. Please try again.");
+    continue;
+  }
+
+  break;
+}
 
 // Ask for only audio file
 let audioOnly;
