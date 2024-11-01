@@ -53,7 +53,7 @@ const ytdlp = spawn("yt-dlp", argList, options);
 let filename;
 ytdlp.stdout.on("data", (data) => {
   const dataString = data.toString();
-  console.log(dataString);
+  console.log("\033[43m[yt-dlp]\033[0m" + dataString);
 
   // get filename
   if (audioOnly === "n") {
@@ -78,7 +78,9 @@ ytdlp.stdout.on("data", (data) => {
 });
 
 ytdlp.stderr.on("data", (data) => {
-  console.error("\033[31mstderr\033[0m: " + data.toString());
+  console.error(
+    "\033[43m[yt-dlp]\033[0m\033[31mstderr\033[0m: " + data.toString()
+  );
 });
 
 // delete parent file
