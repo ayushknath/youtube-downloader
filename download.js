@@ -3,6 +3,12 @@ const prompt = require("prompt-sync")({ sigint: true });
 const path = require("path");
 const fs = require("fs");
 
+// ascii color codes
+const textGreen = "\033[32m";
+const textRed = "\033[31m";
+const bgBlue = "\033[44m";
+const colorReset = "\033[0m";
+
 const outputPath = "C:\\Users\\Ayush Kumar Nath\\Downloads\\Youtube";
 const outputFilename = "%(title)s.%(ext)s";
 
@@ -11,7 +17,7 @@ while (true) {
   videoURL = prompt("Paste the video URL: ");
   // validate videoURL
   if (!videoURL) {
-    console.log("No URL provided. Please try again.");
+    console.log("No URL provided. Please try again.\n");
     continue;
   }
 
@@ -25,7 +31,7 @@ while (true) {
   // validate audioOnly
   if (!["y", "n"].includes(audioOnly)) {
     console.log(
-      "Please select a valid response 'y' for 'yes' and 'n' for 'no'\n"
+      "Please select a valid response 'y' for 'yes' or 'n' for 'no'.\n"
     );
     continue;
   }
@@ -53,7 +59,7 @@ const ytdlp = spawn("yt-dlp", argList, options);
 let filename;
 ytdlp.stdout.on("data", (data) => {
   const dataString = data.toString();
-  console.log("\033[43m[yt-dlp]\033[0m" + dataString);
+  console.log(`${bgBlue}[yt-dlp]${colorReset}${dataString}`);
 
   // get filename
   if (audioOnly === "n") {
@@ -79,7 +85,7 @@ ytdlp.stdout.on("data", (data) => {
 
 ytdlp.stderr.on("data", (data) => {
   console.error(
-    "\033[43m[yt-dlp]\033[0m\033[31mstderr\033[0m: " + data.toString()
+    `${bgBlue}[yt-dlp]${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
   );
 });
 
@@ -87,9 +93,9 @@ ytdlp.stderr.on("data", (data) => {
 const deleteParentFile = (filename) => {
   fs.unlink(path.join(outputPath, filename), (err) => {
     if (err) {
-      console.log("\033[31m" + err + "\033[0m");
+      console.log(`${textRed}${err}${colorReset}`);
     } else {
-      console.log("\033[32mParent file deleted\033[0m");
+      console.log(`${textGreen}Parent file deleted${colorReset}`);
     }
   });
 };
@@ -107,20 +113,22 @@ const convertTomp4 = (filename) => {
   ]);
 
   ffmpeg.stdout.on("data", (data) => {
-    console.log(data.toString());
+    console.log(`${bgBlue}[ffmpeg]${colorReset}${data.toString()}`);
   });
 
   ffmpeg.stderr.on("data", (data) => {
-    console.log("\033[31mstderr\033[0m: " + data.toString());
+    console.log(
+      `${bgBlue}[ffmpeg]${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
+    );
   });
 
   ffmpeg.on("close", (code) => {
     console.log(`convertTomp4 exited with code ${code}`);
     if (code === 0) {
-      console.log("\033[32mConversion successful\033[0m");
+      console.log(`${textGreen}Conversion successful${colorReset}`);
       deleteParentFile(filename);
     } else {
-      console.log("\033[31mConversion unsuccessful\033[0m");
+      console.log(`${textRed}Conversion unsuccessful${colorReset}`);
     }
   });
 };
@@ -141,20 +149,22 @@ const convertTomp3 = (filename) => {
   ]);
 
   ffmpeg.stdout.on("data", (data) => {
-    console.log(data.toString());
+    console.log(`${bgBlue}[ffmpeg]${colorReset}${data.toString()}`);
   });
 
   ffmpeg.stderr.on("data", (data) => {
-    console.log("\033[31mstderr\033[0m: " + data.toString());
+    console.log(
+      `${bgBlue}[ffmpeg]${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
+    );
   });
 
   ffmpeg.on("close", (code) => {
     console.log(`convertTomp3 exited with code ${code}`);
     if (code === 0) {
-      console.log("\033[32mConversion successful\033[0m");
+      console.log(`${textGreen}Conversion successful${colorReset}`);
       deleteParentFile(filename);
     } else {
-      console.log("\033[31mConversion unsuccessful\033[0m");
+      console.log(`${textRed}Conversion unsuccessful${colorReset}`);
     }
   });
 };
