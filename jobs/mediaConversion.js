@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const CloudConvert = require("cloudconvert");
-const { showEllipsis, showProgress } = require("./utils/displayUtils");
+const { showEllipsis, showProgress } = require("../utils/displayUtils");
 
 const cloudConvert = new CloudConvert(process.env.LIVE_API);
 
