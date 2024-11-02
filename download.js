@@ -1,3 +1,6 @@
+require("dotenv").config();
+const axios = require("axios");
+const CloudConvert = require("cloudconvert");
 const { spawn } = require("child_process");
 const prompt = require("prompt-sync")({ sigint: true });
 const path = require("path");
@@ -8,6 +11,8 @@ const textGreen = "\033[32m";
 const textRed = "\033[31m";
 const bgBlue = "\033[44m";
 const colorReset = "\033[0m";
+
+const cloudConvert = new CloudConvert(process.env.LIVE_API);
 
 const outputPath = "C:\\Users\\Ayush Kumar Nath\\Downloads\\Youtube";
 const outputFilename = "%(title)s.%(ext)s";
@@ -90,84 +95,135 @@ ytdlp.stderr.on("data", (data) => {
 });
 
 // delete parent file
-const deleteParentFile = (filename) => {
-  fs.unlink(path.join(outputPath, filename), (err) => {
-    if (err) {
-      console.log(`${textRed}${err}${colorReset}`);
-    } else {
-      console.log(`${textGreen}Parent file deleted${colorReset}`);
+// const deleteParentFile = (filename) => {
+//   fs.unlink(path.join(outputPath, filename), (err) => {
+//     if (err) {
+//       console.log(`${textRed}${err}${colorReset}`);
+//     } else {
+//       console.log(`${textGreen}Parent file deleted${colorReset}`);
+//     }
+//   });
+// };
+
+// ellipsis function
+function showEllipsis(action) {
+  let i = 0;
+  let interval = setInterval(() => {
+    if (i > 3) {
+      i = 0;
     }
+    if (i === 0) {
+      process.stdout.write("\r                                ");
+      process.stdout.write(`\r${action}`);
+    } else {
+      process.stdout.write(".");
+    }
+    i++;
+  }, 1000);
+  return interval;
+}
+
+// progress bar function
+function showProgress(current, total) {
+  const percent = current / total;
+  const totalWidth = 30;
+  const filledWidth = totalWidth * percent;
+  const currentInMB = (current / 1e6).toFixed(2);
+  const totalInMB = (total / 1e6).toFixed(2);
+
+  process.stdout.write("\rDownloading: [");
+  for (let i = 1; i <= totalWidth; i++) {
+    i <= filledWidth ? process.stdout.write("#") : process.stdout.write(".");
+  }
+  process.stdout.write(
+    `] ${parseInt(percent * 100)}% ${currentInMB}/${totalInMB} (MB)`
+  );
+}
+
+// converter function
+async function convertMediaFile(filename, mediaType) {
+  let outputFormat;
+
+  switch (mediaType) {
+    case "video":
+      outputFormat = "mp4";
+      break;
+    case "audio":
+      outputFormat = "mp3";
+      break;
+    default:
+      console.log("Invalid media type");
+      return;
+  }
+
+  let job = await cloudConvert.jobs.create({
+    tasks: {
+      "upload-file": {
+        operation: "import/upload",
+      },
+      "convert-file": {
+        operation: "convert",
+        output_format: outputFormat,
+        input: ["upload-file"],
+      },
+      "download-file": {
+        operation: "export/url",
+        input: ["convert-file"],
+        inline: false,
+        archive_multiple_files: false,
+      },
+    },
   });
-};
+  console.log(`Job created with id ${job.id}`);
 
-// convert to mp4
-const convertTomp4 = (filename) => {
-  const ffmpeg = spawn("ffmpeg", [
-    "-i",
-    path.join(outputPath, filename),
-    "-c:v",
-    "libx264",
-    "-c:a",
-    "aac",
-    path.join(outputPath, `${path.parse(filename).name}.mp4`),
-  ]);
-
-  ffmpeg.stdout.on("data", (data) => {
-    console.log(`${bgBlue}[ffmpeg]${colorReset}${data.toString()}`);
-  });
-
-  ffmpeg.stderr.on("data", (data) => {
-    console.log(
-      `${bgBlue}[ffmpeg]${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
+  // uploading stage
+  const uploadInterval = showEllipsis("Uploading file");
+  const inputFile = fs.createReadStream(path.join(outputPath, filename));
+  try {
+    await cloudConvert.tasks.upload(
+      job.tasks.filter((task) => task.name === "upload-file")[0],
+      inputFile
     );
-  });
+  } catch (err) {
+    console.log(`Upload error: ${err}`);
+  } finally {
+    clearInterval(uploadInterval);
+  }
 
-  ffmpeg.on("close", (code) => {
-    console.log(`convertTomp4 exited with code ${code}`);
-    if (code === 0) {
-      console.log(`${textGreen}Conversion successful${colorReset}`);
-      deleteParentFile(filename);
-    } else {
-      console.log(`${textRed}Conversion unsuccessful${colorReset}`);
-    }
-  });
-};
+  // processing stage
+  const processingInterval = showEllipsis("Processing");
+  try {
+    job = await cloudConvert.jobs.wait(job.id);
+  } catch (err) {
+    console.log(`Processing error: ${err}`);
+  } finally {
+    clearInterval(processingInterval);
+  }
 
-// convert to mp3
-const convertTomp3 = (filename) => {
-  const ffmpeg = spawn("ffmpeg", [
-    "-i",
-    path.join(outputPath, filename),
-    "-vn",
-    "-ar",
-    "44100",
-    "-ac",
-    "2",
-    "-b:a",
-    "192k",
-    path.join(outputPath, `${path.parse(filename).name}.mp3`),
-  ]);
+  // download stage
+  const file = job.tasks.filter((task) => task.name === "download-file")[0]
+    .result.files[0];
+  const outputFile = fs.createWriteStream(path.join(outputPath, file.filename));
+  try {
+    const res = await axios.get(file.url, {
+      responseType: "stream",
+    });
 
-  ffmpeg.stdout.on("data", (data) => {
-    console.log(`${bgBlue}[ffmpeg]${colorReset}${data.toString()}`);
-  });
-
-  ffmpeg.stderr.on("data", (data) => {
-    console.log(
-      `${bgBlue}[ffmpeg]${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
-    );
-  });
-
-  ffmpeg.on("close", (code) => {
-    console.log(`convertTomp3 exited with code ${code}`);
-    if (code === 0) {
-      console.log(`${textGreen}Conversion successful${colorReset}`);
-      deleteParentFile(filename);
-    } else {
-      console.log(`${textRed}Conversion unsuccessful${colorReset}`);
-    }
-  });
-};
+    // show progress bar
+    const totalBytes = parseInt(res.headers["content-length"], 10);
+    let downloadedBytes = 0;
+    res.data.on("data", (chunk) => {
+      downloadedBytes += chunk.length;
+      showProgress(downloadedBytes, totalBytes);
+    });
+    res.data.pipe(outputFile);
+    res.data.on("end", () => {
+      console.log("\nDownload complete");
+    });
+  } catch (err) {
+    console.log(`Download error: ${err}`);
+  }
+}
 
 // conversion driver function
 const changeFileExtension = (filename, extension) => {
@@ -176,14 +232,14 @@ const changeFileExtension = (filename, extension) => {
       console.log(`Video is in ${extension} format. No changes were made`);
     } else {
       console.log(`Converting ${filename} to ${path.parse(filename).name}.mp4`);
-      convertTomp4(filename);
+      convertMediaFile(filename, "video");
     }
   } else {
     if (extension === ".mp3") {
       console.log(`Audio is in ${extension} format. No changes were made`);
     } else {
       console.log(`Converting ${filename} to ${path.parse(filename).name}.mp3`);
-      convertTomp3(filename);
+      convertMediaFile(filename, "audio");
     }
   }
 };
