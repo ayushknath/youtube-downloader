@@ -213,20 +213,16 @@ async function convertMediaFile(filename, outputFormat) {
 
 // conversion driver function
 const changeFileExtension = (filename, extension) => {
-  if (audioOnly === "n") {
-    if (extension === ".mp4") {
-      console.log(`Video is in ${extension} format. No changes were made`);
-    } else {
-      console.log(`Converting ${filename} to ${path.parse(filename).name}.mp4`);
-      convertMediaFile(filename, "mp4");
-    }
+  const targetFormat = audioOnly === "n" ? "mp4" : "mp3";
+  if (extension === `.${targetFormat}`) {
+    console.log(
+      `${filename} is in the desired format. No conversion is needed.`
+    );
   } else {
-    if (extension === ".mp3") {
-      console.log(`Audio is in ${extension} format. No changes were made`);
-    } else {
-      console.log(`Converting ${filename} to ${path.parse(filename).name}.mp3`);
-      convertMediaFile(filename, "mp3");
-    }
+    console.log(
+      `Converting ${filename} to ${path.parse(filename).name}.${targetFormat}`
+    );
+    convertMediaFile(filename, targetFormat);
   }
 };
 
