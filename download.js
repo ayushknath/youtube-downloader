@@ -50,7 +50,7 @@ const argList = [
   "-o",
   outputFilename,
   "-f",
-  `${audioOnly === "n" ? "bv+ba" : "ba"}`,
+  `${audioOnly === "n" ? "bv[height<=1080]+ba" : "ba"}`,
   //"-",
   videoURL,
   "--restrict-filenames",
@@ -141,21 +141,7 @@ function showProgress(current, total) {
 }
 
 // converter function
-async function convertMediaFile(filename, mediaType) {
-  let outputFormat;
-
-  switch (mediaType) {
-    case "video":
-      outputFormat = "mp4";
-      break;
-    case "audio":
-      outputFormat = "mp3";
-      break;
-    default:
-      console.log("Invalid media type");
-      return;
-  }
-
+async function convertMediaFile(filename, outputFormat) {
   let job = await cloudConvert.jobs.create({
     tasks: {
       "upload-file": {
@@ -232,14 +218,14 @@ const changeFileExtension = (filename, extension) => {
       console.log(`Video is in ${extension} format. No changes were made`);
     } else {
       console.log(`Converting ${filename} to ${path.parse(filename).name}.mp4`);
-      convertMediaFile(filename, "video");
+      convertMediaFile(filename, "mp4");
     }
   } else {
     if (extension === ".mp3") {
       console.log(`Audio is in ${extension} format. No changes were made`);
     } else {
       console.log(`Converting ${filename} to ${path.parse(filename).name}.mp3`);
-      convertMediaFile(filename, "audio");
+      convertMediaFile(filename, "mp3");
     }
   }
 };
