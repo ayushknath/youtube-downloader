@@ -5,6 +5,7 @@ const CloudConvert = require("cloudconvert");
 const { showEllipsis, showProgress } = require("../utils/displayUtils");
 
 const cloudConvert = new CloudConvert(process.env.LIVE_API);
+const outputPath = process.env.OUTPUT_PATH;
 
 // converter function
 async function convertMediaFile(filename, outputFormat) {
@@ -78,7 +79,7 @@ async function convertMediaFile(filename, outputFormat) {
 }
 
 // conversion driver function
-const changeFileExtension = (filename, extension) => {
+const changeFileExtension = (filename, extension, audioOnly) => {
   const targetFormat = audioOnly === "n" ? "mp4" : "mp3";
   if (extension === `.${targetFormat}`) {
     console.log(

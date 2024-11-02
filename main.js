@@ -101,6 +101,6 @@ ytdlp.stderr.on("data", (data) => {
 ytdlp.on("close", (code) => {
   console.log(`parent process exited with code ${code}`);
   if (filename) {
-    changeFileExtension(filename, path.parse(filename).ext);
+    changeFileExtension(filename, path.parse(filename).ext, audioOnly);
   }
 });
