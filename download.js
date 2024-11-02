@@ -124,14 +124,14 @@ function showEllipsis(action) {
 }
 
 // progress bar function
-function showProgress(current, total) {
+function showProgress(current, total, prompt = "Progress") {
   const percent = current / total;
   const totalWidth = 30;
   const filledWidth = totalWidth * percent;
   const currentInMB = (current / 1e6).toFixed(2);
   const totalInMB = (total / 1e6).toFixed(2);
 
-  process.stdout.write("\rDownloading: [");
+  process.stdout.write(`\r${prompt}: [`);
   for (let i = 1; i <= totalWidth; i++) {
     i <= filledWidth ? process.stdout.write("#") : process.stdout.write(".");
   }
