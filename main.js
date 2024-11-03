@@ -2,7 +2,7 @@ require("dotenv").config();
 const path = require("path");
 const { spawn } = require("child_process");
 const prompt = require("prompt-sync")({ sigint: true });
-const changeFileExtension = require("./jobs/mediaConversion");
+const changeFileExtension = require("./jobs/mediaConvert");
 const {
   textGreen,
   textRed,
@@ -48,16 +48,14 @@ const argList = [
   videoURL,
   "--restrict-filenames",
 ];
-const options = {
-  stdio: ["inherit", "pipe", "pipe"],
-};
+const options = { stdio: ["inherit", "pipe", "pipe"] };
 
 const ytdlp = spawn("yt-dlp", argList, options);
 
 let filename;
 ytdlp.stdout.on("data", (data) => {
   const dataString = data.toString();
-  console.log(`${bgBlue}[yt-dlp]${colorReset}${dataString}`);
+  console.log(`${bgBlue}yt-dlp${colorReset}${dataString}`);
 
   // get filename
   if (audioOnly === "n") {
@@ -83,7 +81,7 @@ ytdlp.stdout.on("data", (data) => {
 
 ytdlp.stderr.on("data", (data) => {
   console.error(
-    `${bgBlue}[yt-dlp]${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
+    `${bgBlue}yt-dlp${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
   );
 });
 

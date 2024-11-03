@@ -4,13 +4,17 @@ const axios = require("axios");
 const CloudConvert = require("cloudconvert");
 const { showEllipsis, showProgress } = require("../utils/displayUtils");
 const { textGreen, textRed, colorReset } = require("../utils/constants");
+const convertMediaffmpeg = require("./mediaConvertffmpeg");
 
 const cloudConvert = new CloudConvert(process.env.LIVE_API);
 const outputPath = process.env.OUTPUT_PATH;
 
 // converter function
-const convertMediaFile = async (filename, outputFormat) => {
+const convertMedia = async (filename, outputFormat) => {
   let job;
+  const cloudConvertError = new Error(
+    "CloudConvert could not process the file"
+  );
   try {
     job = await cloudConvert.jobs.create({
       tasks: {
@@ -32,7 +36,7 @@ const convertMediaFile = async (filename, outputFormat) => {
     });
     console.log(`Job created with id ${job.id}`);
   } catch (err) {
-    console.log(`Job creation error: ${err.message}`);
+    throw cloudConvertError;
   }
 
   // uploading stage
@@ -44,7 +48,8 @@ const convertMediaFile = async (filename, outputFormat) => {
       inputFile
     );
   } catch (err) {
-    console.log(`Upload error: ${err.message}`);
+    clearInterval(uploadInterval);
+    throw cloudConvertError;
   } finally {
     clearInterval(uploadInterval);
   }
@@ -54,7 +59,8 @@ const convertMediaFile = async (filename, outputFormat) => {
   try {
     job = await cloudConvert.jobs.wait(job.id);
   } catch (err) {
-    console.log(`Processing error: ${err.message}`);
+    clearInterval(processingInterval);
+    throw cloudConvertError;
   } finally {
     clearInterval(processingInterval);
   }
@@ -87,7 +93,7 @@ const convertMediaFile = async (filename, outputFormat) => {
       });
     });
   } catch (err) {
-    console.log(`Download error: ${err.message}`);
+    throw cloudConvertError;
   }
 };
 
@@ -105,6 +111,7 @@ const deleteParentFile = (filename) => {
 // conversion driver function
 const changeFileExtension = async (filename, extension, audioOnly) => {
   const targetFormat = audioOnly === "n" ? "mp4" : "mp3";
+
   if (extension === `.${targetFormat}`) {
     console.log(
       `${filename} is in the desired format. No conversion is needed.`
@@ -114,11 +121,18 @@ const changeFileExtension = async (filename, extension, audioOnly) => {
       `Converting ${filename} to ${path.parse(filename).name}.${targetFormat}`
     );
     try {
-      await convertMediaFile(filename, targetFormat);
+      await convertMedia(filename, targetFormat);
     } catch (err) {
-      console.log(`Error during conversion: ${err.message}`);
+      console.log(`${textRed}CloudConvert Error${colorReset}: ${err.message}`);
+      console.log("Reverting to ffmpeg");
+      try {
+        await convertMediaffmpeg(outputPath, filename, audioOnly);
+      } catch (err) {
+        console.log(`ffmpeg error: ${err.message}`);
+      }
     }
   }
+
   deleteParentFile(filename);
 };
 
