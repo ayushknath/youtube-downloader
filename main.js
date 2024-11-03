@@ -87,17 +87,6 @@ ytdlp.stderr.on("data", (data) => {
   );
 });
 
-// delete parent file
-// const deleteParentFile = (filename) => {
-//   fs.unlink(path.join(outputPath, filename), (err) => {
-//     if (err) {
-//       console.log(`${textRed}${err}${colorReset}`);
-//     } else {
-//       console.log(`${textGreen}Parent file deleted${colorReset}`);
-//     }
-//   });
-// };
-
 ytdlp.on("close", (code) => {
   console.log(`parent process exited with code ${code}`);
   if (filename) {

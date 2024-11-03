@@ -3,31 +3,37 @@ const path = require("path");
 const axios = require("axios");
 const CloudConvert = require("cloudconvert");
 const { showEllipsis, showProgress } = require("../utils/displayUtils");
+const { textGreen, textRed, colorReset } = require("../utils/constants");
 
 const cloudConvert = new CloudConvert(process.env.LIVE_API);
 const outputPath = process.env.OUTPUT_PATH;
 
 // converter function
-async function convertMediaFile(filename, outputFormat) {
-  let job = await cloudConvert.jobs.create({
-    tasks: {
-      "upload-file": {
-        operation: "import/upload",
+const convertMediaFile = async (filename, outputFormat) => {
+  let job;
+  try {
+    job = await cloudConvert.jobs.create({
+      tasks: {
+        "upload-file": {
+          operation: "import/upload",
+        },
+        "convert-file": {
+          operation: "convert",
+          output_format: outputFormat,
+          input: ["upload-file"],
+        },
+        "download-file": {
+          operation: "export/url",
+          input: ["convert-file"],
+          inline: false,
+          archive_multiple_files: false,
+        },
       },
-      "convert-file": {
-        operation: "convert",
-        output_format: outputFormat,
-        input: ["upload-file"],
-      },
-      "download-file": {
-        operation: "export/url",
-        input: ["convert-file"],
-        inline: false,
-        archive_multiple_files: false,
-      },
-    },
-  });
-  console.log(`Job created with id ${job.id}`);
+    });
+    console.log(`Job created with id ${job.id}`);
+  } catch (err) {
+    console.log(`Job creation error: ${err.message}`);
+  }
 
   // uploading stage
   const uploadInterval = showEllipsis("Uploading file");
@@ -38,7 +44,7 @@ async function convertMediaFile(filename, outputFormat) {
       inputFile
     );
   } catch (err) {
-    console.log(`Upload error: ${err}`);
+    console.log(`Upload error: ${err.message}`);
   } finally {
     clearInterval(uploadInterval);
   }
@@ -48,7 +54,7 @@ async function convertMediaFile(filename, outputFormat) {
   try {
     job = await cloudConvert.jobs.wait(job.id);
   } catch (err) {
-    console.log(`Processing error: ${err}`);
+    console.log(`Processing error: ${err.message}`);
   } finally {
     clearInterval(processingInterval);
   }
@@ -70,16 +76,34 @@ async function convertMediaFile(filename, outputFormat) {
       showProgress(downloadedBytes, totalBytes, "Downloading");
     });
     res.data.pipe(outputFile);
-    res.data.on("end", () => {
-      console.log("\nDownload complete");
+    await new Promise((resolve, reject) => {
+      res.data.on("end", () => {
+        console.log("\nDownload complete");
+        resolve();
+      });
+
+      res.data.on("error", (err) => {
+        reject(new Error(`Download error: ${err.message}`));
+      });
     });
   } catch (err) {
-    console.log(`Download error: ${err}`);
+    console.log(`Download error: ${err.message}`);
   }
-}
+};
+
+// delete parent file
+const deleteParentFile = (filename) => {
+  fs.unlink(path.join(outputPath, filename), (err) => {
+    if (err) {
+      console.log(`${textRed}${err}${colorReset}`);
+    } else {
+      console.log(`${textGreen}Parent file deleted${colorReset}`);
+    }
+  });
+};
 
 // conversion driver function
-const changeFileExtension = (filename, extension, audioOnly) => {
+const changeFileExtension = async (filename, extension, audioOnly) => {
   const targetFormat = audioOnly === "n" ? "mp4" : "mp3";
   if (extension === `.${targetFormat}`) {
     console.log(
@@ -89,8 +113,13 @@ const changeFileExtension = (filename, extension, audioOnly) => {
     console.log(
       `Converting ${filename} to ${path.parse(filename).name}.${targetFormat}`
     );
-    convertMediaFile(filename, targetFormat);
+    try {
+      await convertMediaFile(filename, targetFormat);
+    } catch (err) {
+      console.log(`Error during conversion: ${err.message}`);
+    }
   }
+  deleteParentFile(filename);
 };
 
 module.exports = changeFileExtension;
