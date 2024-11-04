@@ -3,10 +3,19 @@ const path = require("path");
 const { spawn } = require("child_process");
 const { textRed, bgBlue, colorReset } = require("../utils/constants");
 
-const convertMediaffmpeg = async (outputPath, filename, audioOnly) => {
+const convertMediaffmpeg = async (outputPath, filename, mediaType) => {
   const options = { stdio: ["inherit", "pipe", "pipe"] };
   const argList =
-    audioOnly === "n"
+    mediaType === "1"
+      ? [
+          "-i",
+          path.join(outputPath, filename),
+          "-c:v",
+          "libx264",
+          "-an",
+          path.join(outputPath, `${path.parse(filename).name}.mp4`),
+        ]
+      : mediaType === "3"
       ? [
           "-i",
           path.join(outputPath, filename),

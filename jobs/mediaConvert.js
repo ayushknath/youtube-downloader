@@ -3,14 +3,18 @@ const path = require("path");
 const axios = require("axios");
 const CloudConvert = require("cloudconvert");
 const { showEllipsis, showProgress } = require("../utils/displayUtils");
-const { textGreen, textRed, colorReset } = require("../utils/constants");
+const {
+  textGreen,
+  textRed,
+  colorReset,
+  outputPath,
+} = require("../utils/constants");
 const convertMediaffmpeg = require("./mediaConvertffmpeg");
 
 const cloudConvert = new CloudConvert(process.env.LIVE_API);
-const outputPath = process.env.OUTPUT_PATH;
 
 // converter function
-const convertMedia = async (filename, outputFormat) => {
+const convertMedia = async (filename, targetFormat) => {
   let job;
   const cloudConvertError = new Error(
     "CloudConvert could not process the file"
@@ -23,7 +27,7 @@ const convertMedia = async (filename, outputFormat) => {
         },
         "convert-file": {
           operation: "convert",
-          output_format: outputFormat,
+          output_format: targetFormat,
           input: ["upload-file"],
         },
         "download-file": {
@@ -109,8 +113,8 @@ const deleteParentFile = (filename) => {
 };
 
 // conversion driver function
-const changeFileExtension = async (filename, extension, audioOnly) => {
-  const targetFormat = audioOnly === "n" ? "mp4" : "mp3";
+const changeFileExtension = async (filename, extension, mediaType) => {
+  const targetFormat = mediaType === "1" || mediaType === "3" ? "mp4" : "mp3";
 
   if (extension === `.${targetFormat}`) {
     console.log(
@@ -124,16 +128,16 @@ const changeFileExtension = async (filename, extension, audioOnly) => {
       await convertMedia(filename, targetFormat);
     } catch (err) {
       console.log(`${textRed}CloudConvert Error${colorReset}: ${err.message}`);
-      console.log("Reverting to ffmpeg");
+      console.log("Using ffmpeg for conversion");
       try {
-        await convertMediaffmpeg(outputPath, filename, audioOnly);
+        await convertMediaffmpeg(outputPath, filename, mediaType);
       } catch (err) {
         console.log(`ffmpeg error: ${err.message}`);
       }
     }
-  }
 
-  deleteParentFile(filename);
+    deleteParentFile(filename);
+  }
 };
 
 module.exports = changeFileExtension;

@@ -81,7 +81,7 @@ ytdlp.stdout.on("data", (data) => {
 });
 
 ytdlp.stderr.on("data", (data) => {
-  console.error(
+  console.log(
     `${bgBlue}yt-dlp${colorReset}${textRed}stderr${colorReset}: ${data.toString()}`
   );
 });
