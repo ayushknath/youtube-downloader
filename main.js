@@ -12,29 +12,31 @@ const {
   outputFilename,
 } = require("./utils/constants");
 
-let videoURL;
-while (true) {
+let videoURL, mediaType, format, filename;
+const resolution = 1080;
+
+while (!videoURL) {
   videoURL = prompt("Paste the video URL: ");
-  // validate videoURL
-  if (!videoURL) {
-    console.log("No URL provided. Please try again.\n");
-    continue;
-  }
-  break;
 }
 
-// Ask for only audio file
-let audioOnly;
-while (true) {
-  audioOnly = prompt("Do you want audio only? (y/n): ");
-  // validate audioOnly
-  if (!["y", "n"].includes(audioOnly)) {
-    console.log(
-      "Please select a valid response 'y' for 'yes' or 'n' for 'no'.\n"
-    );
-    continue;
-  }
-  break;
+// show choices
+console.log("Choose format (1-3):");
+console.log("1. Video only\n2. Audio only\n3. Video + Audio");
+
+while (!mediaType || !(mediaType >= 1 && mediaType <= 3)) {
+  mediaType = prompt("");
+}
+
+switch (mediaType) {
+  case "1":
+    format = `bv[height<=${resolution}]`;
+    break;
+  case "2":
+    format = "ba";
+    break;
+  case "3":
+    format = `bv[height<=${resolution}]+ba`;
+    break;
 }
 
 const argList = [
@@ -43,7 +45,7 @@ const argList = [
   "-o",
   outputFilename,
   "-f",
-  `${audioOnly === "n" ? "bv[height<=1080]+ba" : "ba"}`,
+  format,
   //"-",
   videoURL,
   "--restrict-filenames",
@@ -52,28 +54,27 @@ const options = { stdio: ["inherit", "pipe", "pipe"] };
 
 const ytdlp = spawn("yt-dlp", argList, options);
 
-let filename;
 ytdlp.stdout.on("data", (data) => {
-  const dataString = data.toString();
+  const dataString = data.toString().trim();
   console.log(`${bgBlue}yt-dlp${colorReset}${dataString}`);
 
   // get filename
-  if (audioOnly === "n") {
+  if (
+    (mediaType === "1" || mediaType === "2") &&
+    dataString.includes("Destination:")
+  ) {
+    filename = path
+      .basename(dataString.slice(dataString.indexOf(outputPath)))
+      .trim();
+  } else {
     if (dataString.includes("[Merger]")) {
-      const dataStringTrimmed = dataString.trim();
       filename = path
         .basename(
-          dataStringTrimmed.slice(
-            dataStringTrimmed.indexOf(outputPath),
-            dataStringTrimmed.length - 1
+          dataString.slice(
+            dataString.indexOf(outputPath),
+            dataString.length - 1
           )
         )
-        .trim();
-    }
-  } else {
-    if (dataString.includes("Destination:")) {
-      filename = path
-        .basename(dataString.slice(dataString.indexOf(outputPath)))
         .trim();
     }
   }
@@ -88,6 +89,6 @@ ytdlp.stderr.on("data", (data) => {
 ytdlp.on("close", (code) => {
   console.log(`parent process exited with code ${code}`);
   if (filename) {
-    changeFileExtension(filename, path.parse(filename).ext, audioOnly);
+    changeFileExtension(filename, path.parse(filename).ext, mediaType);
   }
 });
